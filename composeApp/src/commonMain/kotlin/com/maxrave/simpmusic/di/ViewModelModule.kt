@@ -1,23 +1,24 @@
 package com.maxrave.simpmusic.di
 
-import com.maxrave.simpmusic.viewModel.AlbumViewModel
+import com.maxrave.simpmusic.subsonic.SubsonicServerRepository
 import com.maxrave.simpmusic.utils.VersionManager
+import com.maxrave.simpmusic.viewModel.AlbumViewModel
 import com.maxrave.simpmusic.viewModel.AnalyticsViewModel
-import com.maxrave.simpmusic.viewModel.ListenTogetherSettingsViewModel
-import com.maxrave.simpmusic.viewModel.ListenTogetherViewModel
 import com.maxrave.simpmusic.viewModel.ArtistViewModel
+import com.maxrave.simpmusic.viewModel.AutoEqViewModel
 import com.maxrave.simpmusic.viewModel.BrowseViewModel
 import com.maxrave.simpmusic.viewModel.BrowserLoginViewModel
 import com.maxrave.simpmusic.viewModel.CommentsViewModel
-import com.maxrave.simpmusic.viewModel.SoundCloudPlayerViewModel
 import com.maxrave.simpmusic.viewModel.HomeViewModel
 import com.maxrave.simpmusic.viewModel.ImportViewModel
 import com.maxrave.simpmusic.viewModel.LibraryDynamicPlaylistViewModel
 import com.maxrave.simpmusic.viewModel.LibrarySidebarViewModel
-import com.maxrave.simpmusic.viewModel.LibraryViewModel
-import com.maxrave.simpmusic.viewModel.LocalPlaylistViewModel
 import com.maxrave.simpmusic.viewModel.LibrarySyncHostViewModel
 import com.maxrave.simpmusic.viewModel.LibrarySyncPhoneViewModel
+import com.maxrave.simpmusic.viewModel.LibraryViewModel
+import com.maxrave.simpmusic.viewModel.ListenTogetherSettingsViewModel
+import com.maxrave.simpmusic.viewModel.ListenTogetherViewModel
+import com.maxrave.simpmusic.viewModel.LocalPlaylistViewModel
 import com.maxrave.simpmusic.viewModel.LogInViewModel
 import com.maxrave.simpmusic.viewModel.LoginSyncHostViewModel
 import com.maxrave.simpmusic.viewModel.LoginSyncSenderViewModel
@@ -28,10 +29,11 @@ import com.maxrave.simpmusic.viewModel.NowPlayingBottomSheetViewModel
 import com.maxrave.simpmusic.viewModel.PlaylistViewModel
 import com.maxrave.simpmusic.viewModel.PodcastViewModel
 import com.maxrave.simpmusic.viewModel.SearchViewModel
-import com.maxrave.simpmusic.viewModel.AutoEqViewModel
 import com.maxrave.simpmusic.viewModel.SettingsViewModel
 import com.maxrave.simpmusic.viewModel.SharedViewModel
 import com.maxrave.simpmusic.viewModel.SongSelectionViewModel
+import com.maxrave.simpmusic.viewModel.SoundCloudPlayerViewModel
+import com.maxrave.simpmusic.viewModel.SubsonicViewModel
 import com.maxrave.simpmusic.viewModel.TasteViewModel
 import com.maxrave.simpmusic.viewModel.WrappedViewModel
 import org.koin.core.module.dsl.viewModel
@@ -39,6 +41,8 @@ import org.koin.dsl.module
 
 val viewModelModule =
     module {
+        single { SubsonicServerRepository(get()) }
+
         single {
             SharedViewModel(
                 get(),
@@ -66,8 +70,6 @@ val viewModelModule =
                 get(),
             )
         }
-        // Only one of these resolves on a given platform: Desktop binds the host repository, Android the
-        // sender. Koin resolves dependencies when a ViewModel is created, not when it is declared.
         viewModel { LoginSyncHostViewModel(get()) }
         viewModel { LoginSyncSenderViewModel(get(), get()) }
         viewModel { LibrarySyncHostViewModel(get()) }
@@ -241,5 +243,10 @@ val viewModelModule =
                 bridge = get(),
             )
         }
-
+        viewModel {
+            SubsonicViewModel(
+                httpClient = get(),
+                repository = get(),
+            )
+        }
     }

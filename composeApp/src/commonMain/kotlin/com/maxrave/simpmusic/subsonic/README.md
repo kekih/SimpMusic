@@ -7,43 +7,31 @@
 ### Этап 1 (сделано)
 - [x] Модели (`SubsonicServer`, ответы API)
 - [x] Базовый клиент `SubsonicApi`
-  - ping
-  - getMusicFolders
-  - getIndexes
-  - getMusicDirectory
-  - search3
-  - streamUrl / coverArtUrl
 - [x] Хранение серверов (`SubsonicServerRepository` через DataStore)
 
-### Этап 2 (следующий)
-- [ ] UI: диалог/экран «Добавить библиотеку из Subsonic или Navidrome»
-- [ ] Кнопка в разделе создания/библиотеки (как на скриншоте)
-- [ ] Проверка соединения (ping) при добавлении
-- [ ] Список добавленных серверов в настройках
+### Этап 2 (сделано)
+- [x] UI: `AddSubsonicServerSheet` — форма добавления сервера
+- [x] Кнопка в Create sheet («Добавить библиотеку из Subsonic или Navidrome»)
+- [x] Проверка соединения (`ping`) перед сохранением
+- [x] `SubsonicViewModel` + Koin DI
 
-### Этап 3
+### Этап 3 (следующий)
 - [ ] Отображение библиотеки сервера (артисты / альбомы / треки)
 - [ ] Интеграция stream URL в плеер
 - [ ] Cover art
+- [ ] Список серверов в настройках (управление / удаление)
 
 ### Этап 4
 - [ ] Фоновая/ручная синхронизация при появлении новых треков
 - [ ] Кэш / offline (по желанию)
-- [ ] Несколько серверов одновременно
+- [ ] Несколько серверов одновременно в UI библиотеки
 
-## Использование (пока только код)
+## Как пользоваться (после сборки)
 
-```kotlin
-val api = SubsonicApi(httpClient)
-val result = api.ping(server)
-val folders = api.getMusicFolders(server)
-val stream = api.streamUrl(server, songId)
-```
+1. Нажми **+** в шапке → **Добавить библиотеку из Subsonic или Navidrome**
+2. Введи URL (например `https://navidrome.example.com`), логин и пароль
+3. Нажми **Добавить и проверить** — приложение сделает `ping` и сохранит сервер
 
 ## Совместимость
 
-Работает с любым Subsonic-compatible сервером:
-- Subsonic
-- Navidrome
-- Airsonic / Airsonic-Advanced
-- и другие, поддерживающие REST API 1.16+
+Subsonic, Navidrome, Airsonic и другие REST API 1.16+.

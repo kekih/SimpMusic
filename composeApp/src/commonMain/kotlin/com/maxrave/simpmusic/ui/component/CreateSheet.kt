@@ -49,7 +49,7 @@ import androidx.navigation.NavController
 import com.kyant.backdrop.highlight.Highlight
 import com.maxrave.domain.repository.ListenTogetherRepository
 import com.maxrave.simpmusic.expect.ui.PlatformBackdrop
-import com.maxrave.simpmusic.ui.icon.Add
+import com.maxrave.simpmusic.ui.icon.CloudOff
 import com.maxrave.simpmusic.ui.icon.Groups
 import com.maxrave.simpmusic.ui.icon.PlaylistAdd
 import com.maxrave.simpmusic.ui.icon.Settings
@@ -74,12 +74,7 @@ import simpmusic.composeapp.generated.resources.playlist_name_cannot_be_empty
 import simpmusic.composeapp.generated.resources.settings
 
 /**
- * The top-bar "+" (Spotify's Create): a local playlist or a Listen Together room.
- *
- * With liquid glass on it is a glass pill, shared with Settings when [onSettings] is given, like the
- * like/search/more pill on the playlist screens; [backdrop] must be a sibling of this, never an
- * ancestor. With glass off the "+" gets a grey fill and a border so it reads as the special one, and
- * Settings stays a plain icon.
+ * The top-bar "+" (Spotify's Create): local playlist, Listen Together, or Subsonic library.
  */
 @Composable
 fun CreateActions(
@@ -91,6 +86,7 @@ fun CreateActions(
     val room by koinInject<ListenTogetherRepository>().room.collectAsStateWithLifecycle()
     var showCreate by remember { mutableStateOf(false) }
     var showPlaylistName by remember { mutableStateOf(false) }
+    var showSubsonic by remember { mutableStateOf(false) }
     val tint = MaterialTheme.colorScheme.onBackground
 
     val createButton: @Composable () -> Unit = {
@@ -113,7 +109,6 @@ fun CreateActions(
                     Icon(SimpIcons.Add, contentDescription = stringResource(Res.string.create), tint = tint)
                 }
             }
-            // Listen Together moved into the sheet, so its live-room dot moved onto this button.
             if (room.inRoom) LiveRoomDot()
         }
     }
@@ -129,12 +124,10 @@ fun CreateActions(
         Row(
             modifier =
                 Modifier
-                    // 44dp, the Home avatar's size: Apple sizes a bar's avatar and glass buttons alike.
                     .height(44.dp)
                     .liquidGlass(
                         backdrop,
                         RoundedCornerShape(24.dp),
-                        // Alone, the "+" is a small circle, which the directional default rim misses.
                         highlight = if (onSettings == null) Highlight(width = 1.dp) else Highlight.Default,
                     ),
             verticalAlignment = Alignment.CenterVertically,
@@ -161,6 +154,10 @@ fun CreateActions(
                 showCreate = false
                 navController.navigate(ListenTogetherDestination)
             },
+            onSubsonic = {
+                showCreate = false
+                showSubsonic = true
+            },
         )
     }
     if (showPlaylistName) {
@@ -168,6 +165,9 @@ fun CreateActions(
             onDismiss = { showPlaylistName = false },
             onCreate = sharedViewModel::createLocalPlaylist,
         )
+    }
+    if (showSubsonic) {
+        AddSubsonicServerSheet(onDismiss = { showSubsonic = false })
     }
 }
 
@@ -178,6 +178,7 @@ private fun CreateSheet(
     onDismiss: () -> Unit,
     onPlaylist: () -> Unit,
     onListenTogether: () -> Unit,
+    onSubsonic: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -214,6 +215,12 @@ private fun CreateSheet(
                     title = stringResource(Res.string.listen_together),
                     subtitle = stringResource(if (liveRoom) Res.string.create_room_live else Res.string.create_room_description),
                     onClick = onListenTogether,
+                )
+                CreateRow(
+                    icon = SimpIcons.CloudOff,
+                    title = "Добавить библиотеку из Subsonic или Navidrome",
+                    subtitle = "Свой сервер: Subsonic, Navidrome, Airsonic…",
+                    onClick = onSubsonic,
                 )
                 EndOfModalBottomSheet()
             }
@@ -275,7 +282,6 @@ private fun SheetHandle() {
     }
 }
 
-/** Name a new local playlist. Shared by Library's create tile and the Create sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateLocalPlaylistSheet(
@@ -305,17 +311,13 @@ fun CreateLocalPlaylistSheet(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                // The sheet is handed no insets, so nothing else lifts the field above the keyboard.
-                // Navigation bars are left out: EndOfModalBottomSheet already pads for them.
                 modifier = Modifier.windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars)),
             ) {
                 SheetHandle()
                 OutlinedTextField(
                     value = newTitle,
                     onValueChange = { s -> newTitle = s },
-                    label = {
-                        Text(text = stringResource(Res.string.playlist_name))
-                    },
+                    label = { Text(text = stringResource(Res.string.playlist_name)) },
                     modifier =
                         Modifier
                             .fillMaxWidth()

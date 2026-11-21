@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.SubsonicViewModel
@@ -95,11 +96,10 @@ fun AddSubsonicServerSheet(
                     Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
-                        .windowInsetsPaddingIme()
+                        .windowInsetsPadding(WindowInsets.ime.exclude(WindowInsets.navigationBars))
                         .padding(horizontal = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Reuse the same handle style as CreateSheet
                 Spacer(Modifier.height(10.dp))
                 Text(
                     text = "Добавить библиотеку из Subsonic / Navidrome",
@@ -206,14 +206,3 @@ fun AddSubsonicServerSheet(
         }
     }
 }
-
-@Composable
-private fun Modifier.windowInsetsPaddingIme(): Modifier =
-    this.then(
-        Modifier.padding(0.dp), // placeholder; real ime padding applied via windowInsets below
-    ).let { base ->
-        // Keep the form above the keyboard the same way CreateLocalPlaylistSheet does.
-        androidx.compose.foundation.layout.windowInsetsPadding(
-            WindowInsets.ime.exclude(WindowInsets.navigationBars),
-        ).let { ime -> base.then(ime) }
-    }
