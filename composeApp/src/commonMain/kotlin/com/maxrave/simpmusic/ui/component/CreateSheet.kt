@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
@@ -29,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -44,6 +46,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.kyant.backdrop.highlight.Highlight
@@ -55,6 +59,7 @@ import com.maxrave.simpmusic.ui.icon.PlaylistAdd
 import com.maxrave.simpmusic.ui.icon.Settings
 import com.maxrave.simpmusic.ui.icon.SimpIcons
 import com.maxrave.simpmusic.ui.navigation.destination.home.ListenTogetherDestination
+import com.maxrave.simpmusic.ui.screen.library.SubsonicLibraryScreen
 import com.maxrave.simpmusic.ui.theme.LocalLiquidGlassEnabled
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.SharedViewModel
@@ -87,6 +92,8 @@ fun CreateActions(
     var showCreate by remember { mutableStateOf(false) }
     var showPlaylistName by remember { mutableStateOf(false) }
     var showSubsonic by remember { mutableStateOf(false) }
+    var subsonicLibraryId by remember { mutableStateOf<String?>(null) }
+    var showSubsonicLibrary by remember { mutableStateOf(false) }
     val tint = MaterialTheme.colorScheme.onBackground
 
     val createButton: @Composable () -> Unit = {
@@ -158,6 +165,11 @@ fun CreateActions(
                 showCreate = false
                 showSubsonic = true
             },
+            onBrowseSubsonic = {
+                showCreate = false
+                subsonicLibraryId = null
+                showSubsonicLibrary = true
+            },
         )
     }
     if (showPlaylistName) {
@@ -167,7 +179,37 @@ fun CreateActions(
         )
     }
     if (showSubsonic) {
-        AddSubsonicServerSheet(onDismiss = { showSubsonic = false })
+        AddSubsonicServerSheet(
+            onDismiss = { showSubsonic = false },
+            onAdded = { id ->
+                subsonicLibraryId = id
+                showSubsonicLibrary = true
+            },
+        )
+    }
+    if (showSubsonicLibrary) {
+        Dialog(
+            onDismissRequest = { showSubsonicLibrary = false },
+            properties =
+                DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    decorFitsSystemWindows = false,
+                ),
+        ) {
+            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                SubsonicLibraryScreen(
+                    serverId = subsonicLibraryId,
+                    onBack = { showSubsonicLibrary = false },
+                    onPlayStream = { title, artist, streamUrl, _ ->
+                        // Stage 4: plug into Media3. For now show a toast with the track name.
+                        sharedViewModel.makeToast(
+                            "$title${artist?.let { " — $it" } ?: ""}\n$url ready",
+                        )
+                        // streamUrl is a fully authenticated Subsonic stream endpoint
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -179,6 +221,7 @@ private fun CreateSheet(
     onPlaylist: () -> Unit,
     onListenTogether: () -> Unit,
     onSubsonic: () -> Unit,
+    onBrowseSubsonic: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -221,6 +264,12 @@ private fun CreateSheet(
                     title = "Добавить библиотеку из Subsonic или Navidrome",
                     subtitle = "Свой сервер: Subsonic, Navidrome, Airsonic…",
                     onClick = onSubsonic,
+                )
+                CreateRow(
+                    icon = SimpIcons.CloudOff,
+                    title = "Открыть библиотеку Subsonic",
+                    subtitle = "Список серверов и треки",
+                    onClick = onBrowseSubsonic,
                 )
                 EndOfModalBottomSheet()
             }
