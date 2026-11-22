@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -52,17 +51,13 @@ import com.maxrave.simpmusic.viewModel.SubsonicViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Stage 3: browse a Subsonic/Navidrome library and list saved servers.
- *
- * Playback: [onPlayStream] receives the authenticated stream URL when the user taps a song.
- * Wire this to the app player in a later step.
+ * Browse a Subsonic/Navidrome library. Tapping a song calls [SubsonicViewModel.playChild].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SubsonicLibraryScreen(
     serverId: String? = null,
     onBack: () -> Unit,
-    onPlayStream: (title: String, artist: String?, streamUrl: String, coverUrl: String?) -> Unit = { _, _, _, _ -> },
     viewModel: SubsonicViewModel = koinViewModel(),
 ) {
     val servers by viewModel.servers.collectAsStateWithLifecycle()
@@ -74,7 +69,6 @@ fun SubsonicLibraryScreen(
         }
     }
 
-    // No server selected yet → server list
     if (browse.server == null) {
         ServerListContent(
             servers = servers,
@@ -115,6 +109,11 @@ fun SubsonicLibraryScreen(
                         Icon(SimpIcons.ArrowBackIosNew, contentDescription = "Back")
                     }
                 },
+                actions = {
+                    TextButton(onClick = { viewModel.syncLibrary() }) {
+                        Text("Синхр.")
+                    }
+                },
             )
         },
     ) { padding ->
@@ -123,6 +122,15 @@ fun SubsonicLibraryScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
+            if (browse.syncMessage != null) {
+                Text(
+                    text = browse.syncMessage!!,
+                    style = typo().bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+
             var query by remember { mutableStateOf(browse.searchQuery) }
             OutlinedTextField(
                 value = query,
@@ -172,15 +180,7 @@ fun SubsonicLibraryScreen(
                         SongRow(
                             song = song,
                             coverUrl = viewModel.coverArtUrl(song.coverArt),
-                            onClick = {
-                                val url = viewModel.streamUrl(song.id) ?: return@SongRow
-                                onPlayStream(
-                                    song.title ?: song.id,
-                                    song.artist,
-                                    url,
-                                    viewModel.coverArtUrl(song.coverArt),
-                                )
-                            },
+                            onClick = { viewModel.playChild(song) },
                         )
                     }
                 } else {
@@ -208,15 +208,7 @@ fun SubsonicLibraryScreen(
                             SongRow(
                                 song = child,
                                 coverUrl = viewModel.coverArtUrl(child.coverArt),
-                                onClick = {
-                                    val url = viewModel.streamUrl(child.id) ?: return@SongRow
-                                    onPlayStream(
-                                        child.title ?: child.id,
-                                        child.artist,
-                                        url,
-                                        viewModel.coverArtUrl(child.coverArt),
-                                    )
-                                },
+                                onClick = { viewModel.playChild(child) },
                             )
                         }
                     }

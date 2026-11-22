@@ -2,37 +2,26 @@
 
 ## Статус
 
-### Этап 1 ✅
-- Модели, `SubsonicApi`, `SubsonicServerRepository`
+### Этап 1–3 ✅
+API, хранение, UI добавления, браузер библиотеки, cover art, stream URL
 
-### Этап 2 ✅
-- Create sheet → «Добавить библиотеку из Subsonic или Navidrome»
-- `AddSubsonicServerSheet` + ping при добавлении
-- `SubsonicViewModel` + Koin
+### Этап 4 ✅
+- `playStream` / `playChild` → `MediaPlayerHandler.clearMediaItems()` + `addMediaItem(GenericMediaItem)`
+- `mediaId = "subsonic:{id}"`, `uri = authenticated stream URL`
+- Кнопка **Синхр.**: повторный `getIndexes`, сравнение fingerprint артистов/элементов
+- UI тапает трек → воспроизведение через handler
 
-### Этап 3 ✅
-- `SubsonicLibraryScreen` — список серверов, артисты/папки/треки, поиск
-- Cover art через `getCoverArt`
-- Stream URL через `stream` (auth в query)
-- Управление: enable / delete серверов
-- После успешного add можно открыть библиотеку по `serverId`
+### Известные ограничения
+Плеер SimpMusic заточен под YouTube: stream resolver может игнорировать `uri` и пытаться резолвить `mediaId` как videoId. Если так — трек не заиграет, пока в `MediaServiceHandler` / ExoPlayer adapter не добавят ветку «если uri начинается с http → играть напрямую».
 
-### Этап 4 (следующий)
-- Вшить stream URL в Media3 / SharedViewModel (реальное воспроизведение)
-- Destination + nav graph
-- Синхронизация новых треков на сервере
-- Offline / кэш (по желанию)
+### Дальше (по желанию)
+- Патч core: direct-URI playback для `subsonic:` mediaId
+- Nav destination вместо Dialog
+- Фоновый периодический sync
+- Offline кэш Subsonic треков
 
-## Воспроизведение
+## Использование
 
-`SubsonicLibraryScreen(onPlayStream = { title, artist, streamUrl, coverUrl -> ... })`
-
-Сейчас callback нужно связать с плеером приложения (MediaItem с `streamUrl`).
-URL уже содержит token/salt или password — можно отдавать ExoPlayer / mpv как есть.
-
-## Как пользоваться
-
-1. **+** → Добавить библиотеку из Subsonic или Navidrome
-2. URL + логин + пароль → Добавить и проверить
-3. Открыть `SubsonicLibraryScreen` (после add или из списка серверов)
-4. Листать / искать / тап по треку → `onPlayStream`
+1. **+** → Добавить библиотеку… → ping → сохранить
+2. **+** → Открыть библиотеку Subsonic → сервер → трек
+3. **Синхр.** в шапке библиотеки — обновить indexes и увидеть дельту
