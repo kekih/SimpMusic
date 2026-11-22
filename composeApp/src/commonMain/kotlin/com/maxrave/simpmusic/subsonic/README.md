@@ -1,37 +1,38 @@
 # Subsonic / Navidrome support (WIP)
 
-Этапная интеграция собственного медиа-сервера (Subsonic API) в SimpMusic.
-
 ## Статус
 
-### Этап 1 (сделано)
-- [x] Модели (`SubsonicServer`, ответы API)
-- [x] Базовый клиент `SubsonicApi`
-- [x] Хранение серверов (`SubsonicServerRepository` через DataStore)
+### Этап 1 ✅
+- Модели, `SubsonicApi`, `SubsonicServerRepository`
 
-### Этап 2 (сделано)
-- [x] UI: `AddSubsonicServerSheet` — форма добавления сервера
-- [x] Кнопка в Create sheet («Добавить библиотеку из Subsonic или Navidrome»)
-- [x] Проверка соединения (`ping`) перед сохранением
-- [x] `SubsonicViewModel` + Koin DI
+### Этап 2 ✅
+- Create sheet → «Добавить библиотеку из Subsonic или Navidrome»
+- `AddSubsonicServerSheet` + ping при добавлении
+- `SubsonicViewModel` + Koin
 
-### Этап 3 (следующий)
-- [ ] Отображение библиотеки сервера (артисты / альбомы / треки)
-- [ ] Интеграция stream URL в плеер
-- [ ] Cover art
-- [ ] Список серверов в настройках (управление / удаление)
+### Этап 3 ✅
+- `SubsonicLibraryScreen` — список серверов, артисты/папки/треки, поиск
+- Cover art через `getCoverArt`
+- Stream URL через `stream` (auth в query)
+- Управление: enable / delete серверов
+- После успешного add можно открыть библиотеку по `serverId`
 
-### Этап 4
-- [ ] Фоновая/ручная синхронизация при появлении новых треков
-- [ ] Кэш / offline (по желанию)
-- [ ] Несколько серверов одновременно в UI библиотеки
+### Этап 4 (следующий)
+- Вшить stream URL в Media3 / SharedViewModel (реальное воспроизведение)
+- Destination + nav graph
+- Синхронизация новых треков на сервере
+- Offline / кэш (по желанию)
 
-## Как пользоваться (после сборки)
+## Воспроизведение
 
-1. Нажми **+** в шапке → **Добавить библиотеку из Subsonic или Navidrome**
-2. Введи URL (например `https://navidrome.example.com`), логин и пароль
-3. Нажми **Добавить и проверить** — приложение сделает `ping` и сохранит сервер
+`SubsonicLibraryScreen(onPlayStream = { title, artist, streamUrl, coverUrl -> ... })`
 
-## Совместимость
+Сейчас callback нужно связать с плеером приложения (MediaItem с `streamUrl`).
+URL уже содержит token/salt или password — можно отдавать ExoPlayer / mpv как есть.
 
-Subsonic, Navidrome, Airsonic и другие REST API 1.16+.
+## Как пользоваться
+
+1. **+** → Добавить библиотеку из Subsonic или Navidrome
+2. URL + логин + пароль → Добавить и проверить
+3. Открыть `SubsonicLibraryScreen` (после add или из списка серверов)
+4. Листать / искать / тап по треку → `onPlayStream`

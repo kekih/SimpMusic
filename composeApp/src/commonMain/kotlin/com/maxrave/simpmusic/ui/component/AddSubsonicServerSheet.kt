@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,20 +37,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.maxrave.simpmusic.ui.theme.typo
 import com.maxrave.simpmusic.viewModel.SubsonicViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Bottom sheet to add a Subsonic / Navidrome (or compatible) library.
- * Tests the connection with ping before saving.
+ * Bottom sheet to add a Subsonic / Navidrome library.
+ * On success calls [onAdded] with the new server id so the host can open the library.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSubsonicServerSheet(
     onDismiss: () -> Unit,
+    onAdded: (serverId: String) -> Unit = {},
     viewModel: SubsonicViewModel = koinViewModel(),
 ) {
     val addState by viewModel.addState.collectAsStateWithLifecycle()
@@ -65,9 +66,11 @@ fun AddSubsonicServerSheet(
         viewModel.resetAddState()
     }
 
-    LaunchedEffect(addState.success) {
+    LaunchedEffect(addState.success, addState.serverId) {
         if (addState.success) {
+            val id = addState.serverId
             onDismiss()
+            if (id != null) onAdded(id)
         }
     }
 
