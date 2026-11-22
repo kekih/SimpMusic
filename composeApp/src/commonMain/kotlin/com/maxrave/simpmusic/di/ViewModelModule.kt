@@ -1,7 +1,6 @@
 package com.maxrave.simpmusic.di
 
 import com.maxrave.simpmusic.subsonic.SubsonicServerRepository
-import com.maxrave.simpmusic.utils.VersionManager
 import com.maxrave.simpmusic.viewModel.AlbumViewModel
 import com.maxrave.simpmusic.viewModel.AnalyticsViewModel
 import com.maxrave.simpmusic.viewModel.ArtistViewModel
@@ -247,6 +246,7 @@ val viewModelModule =
             SubsonicViewModel(
                 httpClient = get(),
                 repository = get(),
+                mediaPlayerHandler = get(),
             )
         }
     }
