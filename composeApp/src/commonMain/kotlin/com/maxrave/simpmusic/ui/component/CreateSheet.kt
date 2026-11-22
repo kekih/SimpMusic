@@ -78,9 +78,6 @@ import simpmusic.composeapp.generated.resources.playlist_name
 import simpmusic.composeapp.generated.resources.playlist_name_cannot_be_empty
 import simpmusic.composeapp.generated.resources.settings
 
-/**
- * The top-bar "+" (Spotify's Create): local playlist, Listen Together, or Subsonic library.
- */
 @Composable
 fun CreateActions(
     backdrop: PlatformBackdrop,
@@ -200,13 +197,6 @@ fun CreateActions(
                 SubsonicLibraryScreen(
                     serverId = subsonicLibraryId,
                     onBack = { showSubsonicLibrary = false },
-                    onPlayStream = { title, artist, streamUrl, _ ->
-                        // Stage 4: plug into Media3. For now show a toast with the track name.
-                        sharedViewModel.makeToast(
-                            "$title${artist?.let { " — $it" } ?: ""}\n$url ready",
-                        )
-                        // streamUrl is a fully authenticated Subsonic stream endpoint
-                    },
                 )
             }
         }
