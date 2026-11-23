@@ -1,74 +1,64 @@
 package com.maxrave.simpmusic.subsonic
 
 import io.ktor.client.HttpClient
-import io.ktor.client.call.body
+import io.ktor.client.engine.cio.CIO
 import io.ktor.client.request.get
-import io.ktor.client.request.parameter
-import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.isSuccess
+import kotlinx.serialization.json.Json
 import java.security.MessageDigest
-import java.util.UUID
 import kotlin.random.Random
 
 /**
  * Minimal Subsonic-compatible REST client.
  *
- * Supports both password and token (salt + md5) authentication.
+ * Supports password and token (salt + md5) auth.
  * Works with Subsonic, Navidrome, Airsonic and other compatible servers.
  *
- * API reference: https://www.subsonic.org/pages/api.jsp
+ * API: https://www.subsonic.org/pages/api.jsp
  */
 class SubsonicApi(
-    private val client: HttpClient,
+    private val client: HttpClient = defaultClient(),
+    private val json: Json =
+        Json {
+            ignoreUnknownKeys = true
+            isLenient = true
+        },
 ) {
     private val clientName = "SimpMusic"
     private val apiVersion = "1.16.1"
     private val format = "json"
 
-    /**
-     * Ping the server and verify credentials.
-     * Returns the server type/version on success.
-     */
-    suspend fun ping(server: SubsonicServer): Result<SubsonicResponseBody> =
-        request(server, "ping")
+    suspend fun ping(server: SubsonicServer): Result<SubsonicResponseBody> = request(server, "ping")
 
-    /**
-     * Returns the list of music folders configured on the server.
-     */
     suspend fun getMusicFolders(server: SubsonicServer): Result<List<MusicFolder>> =
         request(server, "getMusicFolders").map { body ->
             body.musicFolders?.musicFolder.orEmpty()
         }
 
-    /**
-     * Returns artist indexes (and optionally children).
-     */
     suspend fun getIndexes(
         server: SubsonicServer,
         musicFolderId: Int? = null,
-    ): Result<Indexes> =
-        request(server, "getIndexes") {
-            if (musicFolderId != null) parameter("musicFolderId", musicFolderId)
-        }.map { body ->
+    ): Result<Indexes> {
+        val extra =
+            if (musicFolderId != null) {
+                listOf("musicFolderId" to musicFolderId.toString())
+            } else {
+                emptyList()
+            }
+        return request(server, "getIndexes", extra).map { body ->
             body.indexes ?: Indexes()
         }
+    }
 
-    /**
-     * Returns a directory (album or folder) by id.
-     */
     suspend fun getMusicDirectory(
         server: SubsonicServer,
         id: String,
     ): Result<Directory> =
-        request(server, "getMusicDirectory") {
-            parameter("id", id)
-        }.map { body ->
+        request(server, "getMusicDirectory", listOf("id" to id)).map { body ->
             body.directory ?: error("No directory in response")
         }
 
-    /**
-     * Search artists, albums and songs.
-     */
     suspend fun search3(
         server: SubsonicServer,
         query: String,
@@ -76,37 +66,31 @@ class SubsonicApi(
         albumCount: Int = 20,
         songCount: Int = 20,
     ): Result<SearchResult3> =
-        request(server, "search3") {
-            parameter("query", query)
-            parameter("artistCount", artistCount)
-            parameter("albumCount", albumCount)
-            parameter("songCount", songCount)
-        }.map { body ->
+        request(
+            server,
+            "search3",
+            listOf(
+                "query" to query,
+                "artistCount" to artistCount.toString(),
+                "albumCount" to albumCount.toString(),
+                "songCount" to songCount.toString(),
+            ),
+        ).map { body ->
             body.searchResult3 ?: SearchResult3()
         }
 
-    /**
-     * Builds a stream URL for a given song id.
-     * The player can use this URL directly (with auth already embedded).
-     */
     fun streamUrl(
         server: SubsonicServer,
         id: String,
         maxBitRate: Int? = null,
         format: String? = null,
     ): String {
-        val params = mutableListOf<
-            Pair<String, String>,
-        >()
-        params += "id" to id
+        val params = mutableListOf("id" to id)
         if (maxBitRate != null) params += "maxBitRate" to maxBitRate.toString()
         if (format != null) params += "format" to format
         return buildUrl(server, "stream", params)
     }
 
-    /**
-     * Builds a cover art URL.
-     */
     fun coverArtUrl(
         server: SubsonicServer,
         id: String,
@@ -120,18 +104,16 @@ class SubsonicApi(
     private suspend fun request(
         server: SubsonicServer,
         action: String,
-        extra: (io.ktor.client.request.HttpRequestBuilder.() -> Unit)? = null,
+        extraParams: List<Pair<String, String>> = emptyList(),
     ): Result<SubsonicResponseBody> =
         runCatching {
-            val url = buildUrl(server, action, emptyList())
-            val response: HttpResponse =
-                client.get(url) {
-                    extra?.invoke(this)
-                }
+            val url = buildUrl(server, action, extraParams)
+            val response = client.get(url)
             if (!response.status.isSuccess()) {
                 error("HTTP ${response.status.value}: ${response.status.description}")
             }
-            val envelope: SubsonicResponse = response.body()
+            val text = response.bodyAsText()
+            val envelope = json.decodeFromString(SubsonicResponse.serializer(), text)
             val body = envelope.response
             if (body.status != "ok") {
                 val err = body.error
@@ -146,9 +128,7 @@ class SubsonicApi(
         extraParams: List<Pair<String, String>>,
     ): String {
         val base = server.baseUrl.trimEnd('/')
-        val params = mutableListOf<
-            Pair<String, String>,
-        >()
+        val params = mutableListOf<Pair<String, String>>()
         params += "u" to server.username
         if (server.useTokenAuth) {
             val salt = randomSalt()
@@ -179,9 +159,19 @@ class SubsonicApi(
 
     private fun md5(input: String): String {
         val bytes = MessageDigest.getInstance("MD5").digest(input.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
+        return bytes.joinToString("") { b ->
+            val i = b.toInt() and 0xff
+            i.toString(16).padStart(2, '0')
+        }
     }
 
     private fun encode(value: String): String =
         java.net.URLEncoder.encode(value, Charsets.UTF_8.name())
+
+    companion object {
+        private fun defaultClient(): HttpClient =
+            HttpClient(CIO) {
+                expectSuccess = false
+            }
+    }
 }
