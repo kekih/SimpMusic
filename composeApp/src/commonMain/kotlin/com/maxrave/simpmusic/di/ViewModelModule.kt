@@ -1,5 +1,7 @@
 package com.maxrave.simpmusic.di
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.maxrave.simpmusic.subsonic.SubsonicServerRepository
 import com.maxrave.simpmusic.viewModel.AlbumViewModel
 import com.maxrave.simpmusic.viewModel.AnalyticsViewModel
@@ -40,7 +42,9 @@ import org.koin.dsl.module
 
 val viewModelModule =
     module {
-        single { SubsonicServerRepository(get()) }
+        single {
+            SubsonicServerRepository(get<DataStore<Preferences>>())
+        }
 
         single {
             SharedViewModel(
@@ -244,7 +248,6 @@ val viewModelModule =
         }
         viewModel {
             SubsonicViewModel(
-                httpClient = get(),
                 repository = get(),
                 mediaPlayerHandler = get(),
             )

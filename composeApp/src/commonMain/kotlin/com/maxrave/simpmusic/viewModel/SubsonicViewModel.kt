@@ -10,7 +10,6 @@ import com.maxrave.simpmusic.subsonic.Child
 import com.maxrave.simpmusic.subsonic.SubsonicApi
 import com.maxrave.simpmusic.subsonic.SubsonicServer
 import com.maxrave.simpmusic.subsonic.SubsonicServerRepository
-import io.ktor.client.HttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,13 +50,11 @@ data class BrowseUiState(
 )
 
 class SubsonicViewModel(
-    private val httpClient: HttpClient,
     private val repository: SubsonicServerRepository,
     private val mediaPlayerHandler: MediaPlayerHandler,
 ) : ViewModel() {
-    private val api = SubsonicApi(httpClient)
+    private val api = SubsonicApi()
 
-    /** Last known library fingerprint per server id (artistCount|childCount). */
     private val librarySnapshots = mutableMapOf<String, String>()
 
     val servers: StateFlow<List<SubsonicServer>> =
@@ -205,11 +202,9 @@ class SubsonicViewModel(
                             !recordSnapshot || previous == null -> null
                             previous == fingerprint -> "Библиотека без изменений"
                             else -> {
-                                val (prevArtists, prevChildren) =
-                                    previous.split("|", limit = 2).let {
-                                        (it.getOrNull(0)?.toIntOrNull() ?: 0) to
-                                            (it.getOrNull(1)?.toIntOrNull() ?: 0)
-                                    }
+                                val parts = previous.split("|", limit = 2)
+                                val prevArtists = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                                val prevChildren = parts.getOrNull(1)?.toIntOrNull() ?: 0
                                 val dA = artists.size - prevArtists
                                 val dC = children.size - prevChildren
                                 "Синхронизация: артисты ${if (dA >= 0) "+$dA" else "$dA"}, " +
@@ -237,7 +232,6 @@ class SubsonicViewModel(
         }
     }
 
-    /** Re-fetch root indexes and compare with last snapshot. */
     fun syncLibrary() {
         val server = _browseState.value.server ?: return
         loadRoot(server, recordSnapshot = true)
@@ -330,13 +324,6 @@ class SubsonicViewModel(
         return api.coverArtUrl(server, id)
     }
 
-    /**
-     * Queue a Subsonic track for immediate playback.
-     *
-     * mediaId is prefixed with `subsonic:` so it never collides with a YouTube videoId.
-     * uri is the fully authenticated stream endpoint — players that honour GenericMediaItem.uri
-     * play it directly; pipelines that only resolve YouTube ids may still fail (see README).
-     */
     fun playStream(
         songId: String,
         title: String,
